@@ -135,7 +135,6 @@ local function update_overlay()
 	items = result.Items
 	heights = {}
 	ow, oh, op = mp.get_osd_size()
-	os.remove(options.image_path.."/*")
 	update_data()
 end
 
