@@ -17,8 +17,11 @@ local shown = false
 local user_id = ""
 local api_key = ""
 local library_id = nil
+local library_selection = 1
 local title_id = nil
+local title_selection = 1
 local season_id = nil
+local season_selection = 1
 local video_id = ""
 local selection = 1
 local items = {}
@@ -26,14 +29,14 @@ local ow, oh, op = 0, 0, 0
 
 local toggle_overlay
 
-local function send_request(url)
+local function send_request(method, url)
 	if connected then
 		local request = mp.command_native({
 			name = "subprocess",
 			capture_stdout = true,
 			capture_stderr = true,
 			playback_only = false,
-			args = {"curl", url}
+			args = {"curl", "-X", method, url}
 		})
 		return utils.parse_json(request.stdout)
 	end
@@ -55,27 +58,40 @@ local function line_break(str, flags, space)
 	return text
 end
 
-local function update_metadata()
-	local metadata = send_request(options.url.."/Users/"..user_id.."/Items/"..items[selection].Id.."?api_key="..api_key)
-	local image_data = nil
-	for _, image in ipairs(send_request(options.url.."/Items/"..metadata.Id.."/Images?api_key="..api_key)) do
+local function update_data()
+	overlay.data = ""
+	for _, item in ipairs(items) do
+		if _ > selection - (53 / op) then
+			if _ < selection + (20 * op) then
+				if _ == selection then
+					overlay.data = overlay.data.."{\\fs16}{\\c&HFF&}"..item.Name.."\n"
+				else
+					overlay.data = overlay.data.."{\\fs16}"..item.Name.."\n"
+				end
+			end
+		end
+	end
+	overlay:update()
+	local id = items[selection].Id
+	local width = math.floor(ow/3)
+	local height = 0
+	local filepath = ""
+	for _, image in ipairs(send_request("GET", options.url.."/Items/"..id.."/Images?api_key="..api_key)) do
 		if image.ImageType == "Primary" then
-			image_data = image
+			height = math.floor( width*(image.Height / image.Width) )
+			filepath = options.image_path.."/"..id.."_"..width.."_"..height..".bgra"
+			mp.command_native({
+				name = "subprocess",
+				playback_only = false,
+				args = { "mpv", options.url.."/Items/"..id.."/Images/Primary?api_key="..api_key, "--no-config", "--msg-level=all=no", "--vf=lavfi=[scale="..width..":"..height..",format=bgra]", "--of=rawvideo", "--o="..filepath }
+			})
+			break
 		end
 	end
 	mp.commandv("overlay-remove", "0")
-	if image_data then
-		local filepath = options.image_path.."/"..metadata.Name..".bgra"
-		local ratio = image_data.Height / image_data.Width
-		if ratio > 0.5 then
-			local width = math.floor(ow/3)
-			local height = math.floor(width*ratio)
-			local res = mp.command_native({ name = "subprocess", args = { "mpv", options.url.."/Items/"..metadata.Id.."/Images/Primary?api_key="..api_key, "--no-config", "--msg-level=all=no", "--vf=lavfi=[scale="..width..":"..height..",format=bgra]", "--of=rawvideo", "--o="..filepath }, playback_only = false })
-			mp.commandv("overlay-add", "0", tostring(math.floor(ow/2.5)), tostring(10), filepath, "0", "bgra", tostring(width), tostring(height), tostring(width*4))
-		end
-	end
-
+	mp.commandv("overlay-add", "0", tostring(math.floor(ow/2.5)), tostring(10), filepath, "0", "bgra", tostring(width), tostring(height), tostring(width*4))
 	meta_overlay.data = ""
+	local metadata = send_request("GET", options.url.."/Users/"..user_id.."/Items/"..id.."?api_key="..api_key)
 	local name = line_break(metadata.Name, "{\\a7}{\\fs24}", 30)
 	meta_overlay.data = meta_overlay.data..name.."\n"
 	local year = ""
@@ -103,49 +119,28 @@ local function update_metadata()
 	meta_overlay:update()
 end
 
-local function update_data()
-	overlay.data = ""
-	for _, item in ipairs(items) do
-		if _ > selection - (53 / op) then
-			if _ < selection + (20 * op) then
-				if _ == selection then
-					overlay.data = overlay.data.."{\\fs16}{\\c&HFF&}"..item.Name.."\n"
-				else
-					overlay.data = overlay.data.."{\\fs16}"..item.Name.."\n"
-				end
-			end
-		end
-	end
+local function update_overlay()
+	overlay.data = "{\\fs16}Loading..."
 	overlay:update()
-end
-
-local function resize()
+	local result
+	if not library_id then
+		result = send_request("GET", options.url.."/Items?api_key="..api_key.."&userID="..user_id)
+	elseif not title_id then
+		result = send_request("GET", options.url.."/Items?api_key="..api_key.."&userID="..user_id.."&parentId="..library_id.."&sortBy=SortName")
+	elseif not season_id then
+		result = send_request("GET", options.url.."/Items?api_key="..api_key.."&userID="..user_id.."&parentId="..title_id)
+	else
+		result = send_request("GET", options.url.."/Items?api_key="..api_key.."&userID="..user_id.."&parentId="..season_id)
+	end
+	items = result.Items
+	heights = {}
 	ow, oh, op = mp.get_osd_size()
-end
-
-local function refresh()
-	resize()
+	os.remove(options.image_path.."/*")
 	update_data()
-	update_metadata()
 end
 
 local function property_change(name, data)
-	refresh()
-end
-
-local function update_overlay()
-	local result
-	if not library_id then
-		result = send_request(options.url.."/Items?api_key="..api_key.."&userID="..user_id)
-	elseif not title_id then
-		result = send_request(options.url.."/Items?api_key="..api_key.."&userID="..user_id.."&parentId="..library_id.."&sortBy=SortName")
-	elseif not season_id then
-		result = send_request(options.url.."/Items?api_key="..api_key.."&userID="..user_id.."&parentId="..title_id)
-	else
-		result = send_request(options.url.."/Items?api_key="..api_key.."&userID="..user_id.."&parentId="..season_id)
-	end
-	items = result.Items
-	if ow > 0 then refresh() end
+	if shown then update_overlay() end
 end
 
 local function play_video()
@@ -158,7 +153,6 @@ local function key_up()
 	selection = selection - 1
 	if selection == 0 then selection = table.getn(items) end
 	update_data()
-	update_metadata()
 end
 
 local function key_right()
@@ -168,12 +162,14 @@ local function key_right()
 	else
 		if not library_id then
 			library_id = items[selection].Id
+			library_selection = selection
 		elseif not title_id then
 			title_id = items[selection].Id
+			title_selection = selection
 		elseif not season_id then
 			season_id = items[selection].Id
+			season_selection = selection
 		end
-		items = {}
 		selection = 1
 		update_overlay()
 	end
@@ -183,7 +179,6 @@ local function key_down()
 	selection = selection + 1
 	if selection > table.getn(items) then selection = 1 end
 	update_data()
-	update_metadata()
 end
 
 local function key_left()
@@ -191,11 +186,14 @@ local function key_left()
 		return
 	elseif not title_id then
 		library_id = nil
+		selection = library_selection
 	elseif not season_id then
 		title_id = nil
+		selection = title_selection
+	else
+		season_id = nil
+		selection = season_selection
 	end
-	items = {}
-	selection = 1
 	update_overlay()
 end
 
@@ -219,7 +217,6 @@ toggle_overlay = function()
 		mp.remove_key_binding("jright")
 		mp.remove_key_binding("jdown")
 		mp.remove_key_binding("jleft")
-		mp.unobserve_property(property_change)
 		mp.commandv("overlay-remove", "0")
 		overlay:remove()
 		meta_overlay:remove()
@@ -228,14 +225,11 @@ toggle_overlay = function()
 		mp.add_forced_key_binding("RIGHT", "jright", key_right)
 		mp.add_forced_key_binding("DOWN", "jdown", key_down, { repeatable = true })
 		mp.add_forced_key_binding("LEFT", "jleft", key_left)
-		if not connected then
-			mp.observe_property("osd-width", number, property_change)
-			connect()
-		end
+		if not connected then connect() end
 		if table.getn(items) == 0 then
 			update_overlay()
 		else
-			refresh()
+			update_data()
 		end
 	end
 	shown = not shown
@@ -243,10 +237,11 @@ end
 
 local function mark_watched(data)
 	if data.reason == "eof" then
-		send_request(options.url.."/Users/"..user_id.."/PlayedItems/"..video_id.."?api_key="..api_key)
+		send_request("POST", options.url.."/Users/"..user_id.."/PlayedItems/"..video_id.."?api_key="..api_key)
 		video_id = ""
 	end
 end
 
 mp.register_event("end-file", mark_watched)
 mp.add_key_binding("Ctrl+j", "jf", toggle_overlay)
+mp.observe_property("osd-width", number, property_change)
