@@ -155,7 +155,7 @@ local function key_up()
 end
 
 local function key_right()
-	if items[selection].MediaType == "Video" then
+	if items[selection].IsFolder == false then
 		video_id = items[selection].Id
 		play_video()
 	else
