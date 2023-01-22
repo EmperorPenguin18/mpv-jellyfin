@@ -63,10 +63,16 @@ local function update_data()
 	for _, item in ipairs(items) do
 		if _ > selection - (53 / op) then
 			if _ < selection + (20 * op) then
-				if _ == selection then
-					overlay.data = overlay.data.."{\\fs16}{\\c&HFF&}"..item.Name.."\n"
+				local index
+				if item.IndexNumber and item.IsFolder == false then
+					index = item.IndexNumber..". "
 				else
-					overlay.data = overlay.data.."{\\fs16}"..item.Name.."\n"
+					index = ""
+				end
+				if _ == selection then
+					overlay.data = overlay.data.."{\\fs16}{\\c&HFF&}"..index..item.Name.."\n"
+				else
+					overlay.data = overlay.data.."{\\fs16}"..index..item.Name.."\n"
 				end
 			end
 		end
