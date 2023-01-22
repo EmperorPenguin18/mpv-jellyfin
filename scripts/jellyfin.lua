@@ -248,6 +248,7 @@ local function unpause()
 	mp.set_property_bool("pause", false)
 end
 
+os.execute("mkdir -p "..options.image_path)
 mp.add_periodic_timer(1, check_percent)
 mp.add_key_binding("Ctrl+j", "jf", toggle_overlay)
 mp.observe_property("osd-width", "number", width_change)
