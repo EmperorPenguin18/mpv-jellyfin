@@ -138,7 +138,7 @@ local function update_overlay()
 	update_data()
 end
 
-local function property_change(name, data)
+local function width_change(name, data)
 	if shown then update_overlay() end
 end
 
@@ -234,13 +234,21 @@ toggle_overlay = function()
 	shown = not shown
 end
 
-local function mark_watched(data)
-	if data.reason == "eof" then
-		send_request("POST", options.url.."/Users/"..user_id.."/PlayedItems/"..video_id.."?api_key="..api_key)
-		video_id = ""
+local function check_percent()
+	local pos = mp.get_property_number("percent-pos")
+	if pos then
+		if pos > 95 then
+			send_request("POST", options.url.."/Users/"..user_id.."/PlayedItems/"..video_id.."?api_key="..api_key)
+			video_id = ""
+		end
 	end
 end
 
-mp.register_event("end-file", mark_watched)
+local function unpause()
+	mp.set_property_bool("pause", false)
+end
+
+mp.add_periodic_timer(1, check_percent)
 mp.add_key_binding("Ctrl+j", "jf", toggle_overlay)
-mp.observe_property("osd-width", number, property_change)
+mp.observe_property("osd-width", "number", width_change)
+mp.register_event("file-loaded", unpause)
