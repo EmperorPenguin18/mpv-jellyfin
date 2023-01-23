@@ -243,7 +243,7 @@ end
 local function check_percent()
 	local pos = mp.get_property_number("percent-pos")
 	if pos then
-		if pos > 95 then
+		if pos > 95 and #video_id > 0 then
 			send_request("POST", options.url.."/Users/"..user_id.."/PlayedItems/"..video_id.."?api_key="..api_key)
 			video_id = ""
 		end
