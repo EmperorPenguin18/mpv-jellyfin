@@ -150,7 +150,7 @@ end
 
 local function key_up()
 	selection = selection - 1
-	if selection == 0 then selection = table.getn(items) end
+	if selection == 0 then selection = #items end
 	update_data()
 end
 
@@ -176,7 +176,7 @@ end
 
 local function key_down()
 	selection = selection + 1
-	if selection > table.getn(items) then selection = 1 end
+	if selection > #items then selection = 1 end
 	update_data()
 end
 
@@ -225,7 +225,7 @@ toggle_overlay = function()
 		mp.add_forced_key_binding("DOWN", "jdown", key_down, { repeatable = true })
 		mp.add_forced_key_binding("LEFT", "jleft", key_left)
 		if not connected then connect() end
-		if table.getn(items) == 0 then
+		if #items == 0 then
 			update_overlay()
 		else
 			update_data()
