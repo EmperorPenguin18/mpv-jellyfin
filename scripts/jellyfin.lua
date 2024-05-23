@@ -16,18 +16,16 @@ local connected = false
 local shown = false
 local user_id = ""
 local api_key = ""
-local library_id = nil
-local library_selection = 1
-local title_id = nil
-local title_selection = 1
-local season_id = nil
-local season_selection = 1
-local video_id = ""
-local selection = 1
+
+local parent_id = {"", "", ""}
+local selection = {1, 1, 1}
+local layer = 1
+
 local items = {}
 local ow, oh, op = 0, 0, 0
+local video_id = ""
 
-local toggle_overlay
+local toggle_overlay -- function
 
 local function send_request(method, url)
 	if connected then
@@ -61,15 +59,15 @@ end
 local function update_data()
 	overlay.data = ""
 	for _, item in ipairs(items) do
-		if _ > selection - (53 / op) then
-			if _ < selection + (20 * op) then
+		if _ > selection[layer] - (53 / op) then
+			if _ < selection[layer] + (20 * op) then
 				local index
 				if item.IndexNumber and item.IsFolder == false then
 					index = item.IndexNumber..". "
 				else
 					index = ""
 				end
-				if _ == selection then
+				if _ == selection[layer] then
 					overlay.data = overlay.data.."{\\fs16}{\\c&HFF&}"..index..item.Name.."\n"
 				else
 					overlay.data = overlay.data.."{\\fs16}"..index..item.Name.."\n"
@@ -78,7 +76,8 @@ local function update_data()
 		end
 	end
 	overlay:update()
-	local id = items[selection].Id
+
+	local id = items[selection[layer]].Id
 	local width = math.floor(ow/3)
 	local height = 0
 	local filepath = ""
@@ -128,18 +127,11 @@ end
 local function update_overlay()
 	overlay.data = "{\\fs16}Loading..."
 	overlay:update()
-	local result
-	if not library_id then
-		result = send_request("GET", options.url.."/Items?api_key="..api_key.."&userID="..user_id)
-	elseif not title_id then
-		result = send_request("GET", options.url.."/Items?api_key="..api_key.."&userID="..user_id.."&parentId="..library_id.."&sortBy=SortName")
-	elseif not season_id then
-		result = send_request("GET", options.url.."/Items?api_key="..api_key.."&userID="..user_id.."&parentId="..title_id)
+	if layer == 2 then
+		items = send_request("GET", options.url.."/Items?api_key="..api_key.."&userID="..user_id.."&parentId="..parent_id[layer].."&sortBy=SortName").Items
 	else
-		result = send_request("GET", options.url.."/Items?api_key="..api_key.."&userID="..user_id.."&parentId="..season_id)
+		items = send_request("GET", options.url.."/Items?api_key="..api_key.."&userID="..user_id.."&parentId="..parent_id[layer]).Items
 	end
-	items = result.Items
-	heights = {}
 	ow, oh, op = mp.get_osd_size()
 	update_data()
 end
@@ -151,54 +143,36 @@ end
 local function play_video()
 	toggle_overlay()
 	mp.commandv("loadfile", options.url.."/Videos/"..video_id.."/stream?static=true&api_key="..api_key)
-	mp.set_property("force-media-title", items[selection].Name)
+	mp.set_property("force-media-title", items[selection[layer]].Name)
 end
 
 local function key_up()
-	selection = selection - 1
-	if selection == 0 then selection = table.getn(items) end
+	selection[layer] = selection[layer] - 1
+	if selection[layer] == 0 then selection[layer] = table.getn(items) end
 	update_data()
 end
 
 local function key_right()
-	if items[selection].IsFolder == false then
-		video_id = items[selection].Id
+	if items[selection[layer]].IsFolder == false then
+		video_id = items[selection[layer]].Id
 		play_video()
 	else
-		if not library_id then
-			library_id = items[selection].Id
-			library_selection = selection
-		elseif not title_id then
-			title_id = items[selection].Id
-			title_selection = selection
-		elseif not season_id then
-			season_id = items[selection].Id
-			season_selection = selection
-		end
-		selection = 1
+		layer = layer + 1 -- shouldn't get too big
+		parent_id[layer] = items[selection[layer-1]].Id
+		selection[layer] = 1
 		update_overlay()
 	end
 end
 
 local function key_down()
-	selection = selection + 1
-	if selection > table.getn(items) then selection = 1 end
+	selection[layer] = selection[layer] + 1
+	if selection[layer] > table.getn(items) then selection[layer] = 1 end
 	update_data()
 end
 
 local function key_left()
-	if not library_id then
-		return
-	elseif not title_id then
-		library_id = nil
-		selection = library_selection
-	elseif not season_id then
-		title_id = nil
-		selection = title_selection
-	else
-		season_id = nil
-		selection = season_selection
-	end
+	if layer == 1 then return end
+	layer = layer - 1
 	update_overlay()
 end
 
@@ -258,4 +232,4 @@ os.execute("mkdir -p "..options.image_path)
 mp.add_periodic_timer(1, check_percent)
 mp.add_key_binding("Ctrl+j", "jf", toggle_overlay)
 mp.observe_property("osd-width", "number", width_change)
-mp.register_event("file-loaded", unpause)
+mp.register_event("end-file", unpause)
