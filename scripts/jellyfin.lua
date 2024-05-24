@@ -19,13 +19,13 @@ local api_key = ""
 
 local parent_id = {"", "", ""}
 local selection = {1, 1, 1}
+local list_start = {1, 1, 1}
 local layer = 1
 
 local items = {}
 local ow, oh, op = 0, 0, 0
 local video_id = ""
 local async = nil
-local list_start = 1
 
 local toggle_overlay -- function
 
@@ -61,12 +61,12 @@ end
 local function update_list()
 	overlay.data = ""
 	local magic_num = 29 -- const
-	if selection[layer] - list_start > magic_num then
-		list_start = selection[layer] - magic_num
-	elseif selection[layer] - list_start < 0 then
-		list_start = selection[layer]
+	if selection[layer] - list_start[layer] > magic_num then
+		list_start[layer] = selection[layer] - magic_num
+	elseif selection[layer] - list_start[layer] < 0 then
+		list_start[layer] = selection[layer]
 	end
-	for i=list_start,list_start+magic_num do
+	for i=list_start[layer],list_start[layer]+magic_num do
 		if i > #items then break end
 		local index = ""
 		if items[i].IndexNumber and items[i].IsFolder == false then
@@ -258,6 +258,7 @@ local function check_percent()
 	if pos then
 		if pos > 95 and #video_id > 0 then
 			send_request("POST", options.url.."/Users/"..user_id.."/PlayedItems/"..video_id.."?api_key="..api_key)
+			items[selection[layer]].UserData.Played = true
 			video_id = ""
 		end
 	end
