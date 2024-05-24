@@ -24,6 +24,7 @@ local layer = 1
 local items = {}
 local ow, oh, op = 0, 0, 0
 local video_id = ""
+local async = nil
 
 local toggle_overlay -- function
 
@@ -56,7 +57,7 @@ local function line_break(str, flags, space)
 	return text
 end
 
-local function update_data()
+local function update_list()
 	overlay.data = ""
 	for _, item in ipairs(items) do
 		if _ > selection[layer] - (53 / op) then
@@ -76,62 +77,92 @@ local function update_data()
 		end
 	end
 	overlay:update()
+end
 
-	local id = items[selection[layer]].Id
-	local width = math.floor(ow/3)
+local scale = 2 -- const
+
+local function show_image(success, result, error, userdata)
+	if success == true then
+		mp.command_native({
+			name = "overlay-add",
+			id = 0,
+			x = math.floor(ow/2.5),
+			y = 10,
+			file = userdata[3],
+			offset = 0,
+			fmt = "bgra",
+			w = userdata[1],
+			h = userdata[2],
+			stride = userdata[1]*4,
+			dw = userdata[1]*scale,
+			dh = userdata[2]*scale
+		})
+	end
+end
+
+local function update_image(item)
+	local width = math.floor(ow/(3*scale))
 	local height = 0
 	local filepath = ""
-	for _, image in ipairs(send_request("GET", options.url.."/Items/"..id.."/Images?api_key="..api_key)) do
-		if image.ImageType == "Primary" then
-			height = math.floor( width*(image.Height / image.Width) )
-			filepath = options.image_path.."/"..id.."_"..width.."_"..height..".bgra"
-			mp.command_native({
-				name = "subprocess",
-				playback_only = false,
-				args = { "mpv", options.url.."/Items/"..id.."/Images/Primary?api_key="..api_key, "--no-config", "--msg-level=all=no", "--vf=lavfi=[scale="..width..":"..height..",format=bgra]", "--of=rawvideo", "--o="..filepath }
-			})
-			break
-		end
-	end
 	mp.commandv("overlay-remove", "0")
-	mp.commandv("overlay-add", "0", tostring(math.floor(ow/2.5)), tostring(10), filepath, "0", "bgra", tostring(width), tostring(height), tostring(width*4))
+	if item.ImageTags.Primary ~= nil then
+		height = math.floor(width/item.PrimaryImageAspectRatio)
+		filepath = options.image_path.."/"..item.Id.."_"..width.."_"..height..".bgra"
+		if async ~= nil then mp.abort_async_command(async) end
+		async = mp.command_native_async({
+			name = "subprocess",
+			playback_only = false,
+			args = { "mpv", options.url.."/Items/"..item.Id.."/Images/Primary?api_key="..api_key.."&width="..width.."&height="..height, "--no-config", "--msg-level=all=no", "--vf=lavfi=[format=bgra]", "--of=rawvideo", "--o="..filepath }
+		}, function(success, result, error) show_image(success, result, error, {width, height, filepath}) end)
+	end
+end
+
+local function update_metadata(item)
 	meta_overlay.data = ""
-	local metadata = send_request("GET", options.url.."/Users/"..user_id.."/Items/"..id.."?api_key="..api_key)
-	local name = line_break(metadata.Name, "{\\a7}{\\fs24}", 30)
+	local name = line_break(item.Name, "{\\a7}{\\fs24}", 30)
 	meta_overlay.data = meta_overlay.data..name.."\n"
 	local year = ""
-	if metadata.ProductionYear then year = metadata.ProductionYear end
+	if item.ProductionYear then year = item.ProductionYear end
 	local time = ""
-	if metadata.RunTimeTicks then time = "   "..math.floor(metadata.RunTimeTicks/600000000).."m" end
+	if item.RunTimeTicks then time = "   "..math.floor(item.RunTimeTicks/600000000).."m" end
 	local rating = ""
-	if metadata.CommunityRating then rating = "   "..metadata.CommunityRating end
+	if item.CommunityRating then rating = "   "..item.CommunityRating end
 	local hidden = ""
 	local watched = ""
-	if metadata.UserData.Played == false then
+	if item.UserData.Played == false then
 		if options.hide_spoilers ~= "off" then hidden = "{\\bord0}{\\1a&HFF&}" end
 	else
 		watched = "   Watched"
 	end
 	local favourite = ""
-	if metadata.UserData.IsFavorite == true then
+	if item.UserData.IsFavorite == true then
 		favourite = "   Favorite"
 	end
 	meta_overlay.data = meta_overlay.data.."{\\a7}{\\fs16}"..year..time..rating..watched..favourite.."\n\n"
-	local tagline = line_break(metadata.Taglines[1], "{\\a7}{\\fs20}", 35)
+	local tagline = line_break(item.Taglines[1], "{\\a7}{\\fs20}", 35)
 	meta_overlay.data = meta_overlay.data..tagline.."\n"
-	local description = line_break(metadata.Overview, "{\\a7}{\\fs16}"..hidden, 45)
+	local description = line_break(item.Overview, "{\\a7}{\\fs16}"..hidden, 45)
 	meta_overlay.data = meta_overlay.data..description
 	meta_overlay:update()
+end
+
+local function update_data()
+	update_list()
+	local item = items[selection[layer]]
+	update_image(item)
+	update_metadata(item)
 end
 
 local function update_overlay()
 	overlay.data = "{\\fs16}Loading..."
 	overlay:update()
+	local url = options.url.."/Items?api_key="..api_key.."&userID="..user_id.."&parentId="..parent_id[layer].."&enableImageTypes=Primary&imageTypeLimit=1&fields=PrimaryImageAspectRatio,Taglines,Overview"
 	if layer == 2 then
-		items = send_request("GET", options.url.."/Items?api_key="..api_key.."&userID="..user_id.."&parentId="..parent_id[layer].."&sortBy=SortName").Items
+		url = url.."&sortBy=SortName"
 	else
-		items = send_request("GET", options.url.."/Items?api_key="..api_key.."&userID="..user_id.."&parentId="..parent_id[layer]).Items
+		-- nothing
 	end
+	items = send_request("GET", url).Items
 	ow, oh, op = mp.get_osd_size()
 	update_data()
 end
