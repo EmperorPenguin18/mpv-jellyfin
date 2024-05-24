@@ -25,6 +25,7 @@ local items = {}
 local ow, oh, op = 0, 0, 0
 local video_id = ""
 local async = nil
+local list_start = 1
 
 local toggle_overlay -- function
 
@@ -59,21 +60,24 @@ end
 
 local function update_list()
 	overlay.data = ""
-	for _, item in ipairs(items) do
-		if _ > selection[layer] - (53 / op) then
-			if _ < selection[layer] + (20 * op) then
-				local index
-				if item.IndexNumber and item.IsFolder == false then
-					index = item.IndexNumber..". "
-				else
-					index = ""
-				end
-				if _ == selection[layer] then
-					overlay.data = overlay.data.."{\\fs16}{\\c&HFF&}"..index..item.Name.."\n"
-				else
-					overlay.data = overlay.data.."{\\fs16}"..index..item.Name.."\n"
-				end
-			end
+	local magic_num = 29 -- const
+	if selection[layer] - list_start > magic_num then
+		list_start = selection[layer] - magic_num
+	elseif selection[layer] - list_start < 0 then
+		list_start = selection[layer]
+	end
+	for i=list_start,list_start+magic_num do
+		if i > #items then break end
+		local index = ""
+		if items[i].IndexNumber and items[i].IsFolder == false then
+			index = items[i].IndexNumber..". "
+		else
+			-- nothing
+		end
+		if i == selection[layer] then
+			overlay.data = overlay.data.."{\\fs16}{\\c&HFF&}"..index..items[i].Name.."\n"
+		else
+			overlay.data = overlay.data.."{\\fs16}"..index..items[i].Name.."\n"
 		end
 	end
 	overlay:update()
@@ -178,9 +182,11 @@ local function play_video()
 end
 
 local function key_up()
-	selection[layer] = selection[layer] - 1
-	if selection[layer] == 0 then selection[layer] = table.getn(items) end
-	update_data()
+	if #items > 1 then
+		selection[layer] = selection[layer] - 1
+		if selection[layer] == 0 then selection[layer] = table.getn(items) end
+		update_data()
+	end
 end
 
 local function key_right()
@@ -196,9 +202,11 @@ local function key_right()
 end
 
 local function key_down()
-	selection[layer] = selection[layer] + 1
-	if selection[layer] > table.getn(items) then selection[layer] = 1 end
-	update_data()
+	if #items > 1 then
+		selection[layer] = selection[layer] + 1
+		if selection[layer] > table.getn(items) then selection[layer] = 1 end
+		update_data()
+	end
 end
 
 local function key_left()

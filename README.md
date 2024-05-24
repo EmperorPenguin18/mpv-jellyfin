@@ -29,6 +29,4 @@ When you activate a video in the menu, it will begin to play that file.
 
 In general this is a very minimal script and isn't designed to be a full Jellyfin client. Changing settings or metadata has to be done from a real Jellyfin client.
 
-Currently navigation is very slow because metadata is pulled in sequentially. You may want to create a playlist with stuff you want to watch to save yourself the time.
-
 Thumbnails will accumulate if the selected image path isn't tmpfs. In addition thumbnails are raw bgra, which means they are less space efficient than the source images from the Jellyfin server.
