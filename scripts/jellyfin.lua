@@ -1,18 +1,19 @@
 local opt = require 'mp.options'
 local utils = require 'mp.utils'
+local msg = require 'mp.msg'
 
 local options = {
 	url = "",
 	username = "",
 	password = "",
 	image_path = "",
-	hide_spoilers = "on"
+	hide_spoilers = "on",
+	show_by_default = ""
 }
 opt.read_options(options, mp.get_script_name())
 
 local overlay = mp.create_osd_overlay("ass-events")
 local meta_overlay = mp.create_osd_overlay("ass-events")
-local connected = false
 local shown = false
 local user_id = ""
 local api_key = ""
@@ -30,7 +31,7 @@ local async = nil
 local toggle_overlay -- function
 
 local function send_request(method, url)
-	if connected then
+	if #api_key > 0 then
 		local request = mp.command_native({
 			name = "subprocess",
 			capture_stdout = true,
@@ -86,7 +87,7 @@ end
 local scale = 2 -- const
 
 local function show_image(success, result, error, userdata)
-	if success == true then
+	if success == true and shown == true then
 		mp.command_native({
 			name = "overlay-add",
 			id = 0,
@@ -226,7 +227,6 @@ local function connect()
 	local result = utils.parse_json(request.stdout)
 	user_id = result.User.Id
 	api_key = result.AccessToken
-	connected = true
 end
 
 toggle_overlay = function()
@@ -243,7 +243,7 @@ toggle_overlay = function()
 		mp.add_forced_key_binding("RIGHT", "jright", key_right)
 		mp.add_forced_key_binding("DOWN", "jdown", key_down, { repeatable = true })
 		mp.add_forced_key_binding("LEFT", "jleft", key_left)
-		if not connected then connect() end
+		if #api_key <= 0 then connect() end
 		if #items == 0 then
 			update_overlay()
 		else
@@ -273,3 +273,4 @@ mp.add_periodic_timer(1, check_percent)
 mp.add_key_binding("Ctrl+j", "jf", toggle_overlay)
 mp.observe_property("osd-width", "number", width_change)
 mp.register_event("end-file", unpause)
+if options.show_by_default == "on" then toggle_overlay() end
