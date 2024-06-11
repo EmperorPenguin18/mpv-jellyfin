@@ -18,9 +18,9 @@ local shown = false
 local user_id = ""
 local api_key = ""
 
-local parent_id = {"", "", ""}
-local selection = {1, 1, 1}
-local list_start = {1, 1, 1}
+local parent_id = {"", "", "", ""}
+local selection = {1, 1, 1, 1}
+local list_start = {1, 1, 1, 1}
 local layer = 1
 
 local items = {}
