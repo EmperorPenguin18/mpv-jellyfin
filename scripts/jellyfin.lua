@@ -22,6 +22,7 @@ local parent_id = {"", "", "", ""}
 local selection = {1, 1, 1, 1}
 local list_start = {1, 1, 1, 1}
 local layer = 1
+local current_selection = 1
 
 local items = {}
 local ow, oh, op = 0, 0, 0
@@ -180,6 +181,7 @@ local function play_video()
 	toggle_overlay()
 	mp.commandv("loadfile", options.url.."/Videos/"..video_id.."/stream?static=true&api_key="..api_key)
 	mp.set_property("force-media-title", items[selection[layer]].Name)
+	current_selection = selection[layer]
 end
 
 local function key_up()
@@ -258,8 +260,9 @@ local function check_percent()
 	if pos then
 		if pos > 95 and #video_id > 0 then
 			send_request("POST", options.url.."/Users/"..user_id.."/PlayedItems/"..video_id.."?api_key="..api_key)
-			items[selection[layer]].UserData.Played = true
+			items[current_selection].UserData.Played = true
 			video_id = ""
+			current_selection = nil
 		end
 	end
 end
