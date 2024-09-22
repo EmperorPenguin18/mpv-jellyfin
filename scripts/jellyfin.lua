@@ -2,6 +2,9 @@ local opt = require 'mp.options'
 local utils = require 'mp.utils'
 local msg = require 'mp.msg'
 
+package.path = mp.command_native({"expand-path", "~~/script-modules/?.lua;"})..package.path
+local input_success, input = pcall(require, "user-input-module")
+
 local options = {
 	url = "",
 	username = "",
@@ -17,6 +20,7 @@ local meta_overlay = mp.create_osd_overlay("ass-events")
 local shown = false
 local user_id = ""
 local api_key = ""
+local user_query = ""
 
 local parent_id = {"", "", "", ""}
 local selection = {1, 1, 1, 1}
@@ -162,13 +166,19 @@ end
 local function update_overlay()
 	overlay.data = "{\\fs16}Loading..."
 	overlay:update()
-	local url = options.url.."/Items?api_key="..api_key.."&userID="..user_id.."&parentId="..parent_id[layer].."&enableImageTypes=Primary&imageTypeLimit=1&fields=PrimaryImageAspectRatio,Taglines,Overview"
+	local base_url = options.url.."/Items?api_key="..api_key.."&userID="..user_id.."&parentId="..parent_id[layer].."&enableImageTypes=Primary&imageTypeLimit=1&fields=PrimaryImageAspectRatio,Taglines,Overview"
 	if layer == 2 then
-		url = url.."&sortBy=SortName"
+		base_url = base_url.."&sortBy=SortName"
 	else
 		-- nothing
 	end
-	items = send_request("GET", url).Items
+	local url = base_url.."&searchTerm="..user_query
+	local json = send_request("GET", url)
+	if json == nil then --no results
+		items = send_request("GET", base_url).Items
+	else
+		items = json.Items
+	end
 	ow, oh, op = mp.get_osd_size()
 	update_data()
 end
@@ -200,6 +210,7 @@ local function key_right()
 		layer = layer + 1 -- shouldn't get too big
 		parent_id[layer] = items[selection[layer-1]].Id
 		selection[layer] = 1
+		user_query = ""
 		update_overlay()
 	end
 end
@@ -215,6 +226,7 @@ end
 local function key_left()
 	if layer == 1 then return end
 	layer = layer - 1
+	user_query = ""
 	update_overlay()
 end
 
@@ -271,9 +283,27 @@ local function unpause()
 	mp.set_property_bool("pause", false)
 end
 
+local function url_fix(str) -- add more later?
+	return string.gsub(str, " ", "%%20")
+end
+
+local function search(query, err)
+	local result = url_fix(query)
+	user_query = result.."&recursive=true"
+	update_overlay()
+end
+
+local function search_input()
+	if #api_key <= 0 then connect() end
+	input.get_user_input(search)
+end
+
 os.execute("mkdir -p "..options.image_path)
 mp.add_periodic_timer(1, check_percent)
 mp.add_key_binding("Ctrl+j", "jf", toggle_overlay)
 mp.observe_property("osd-width", "number", width_change)
 mp.register_event("end-file", unpause)
+if input_success then
+	mp.add_key_binding("Ctrl+f", "jf_search", search_input)
+end
 if options.show_by_default == "on" then toggle_overlay() end
