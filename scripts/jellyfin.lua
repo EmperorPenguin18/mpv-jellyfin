@@ -174,7 +174,7 @@ local function update_overlay()
 	end
 	local url = base_url.."&searchTerm="..user_query
 	local json = send_request("GET", url)
-	if json == nil then --no results
+	if json == nil or #json.Items == 0 then --no results
 		items = send_request("GET", base_url).Items
 	else
 		items = json.Items
@@ -288,13 +288,16 @@ local function url_fix(str) -- add more later?
 end
 
 local function search(query, err)
-	local result = url_fix(query)
-	user_query = result.."&recursive=true"
-	update_overlay()
+	if query ~= nil then
+		local result = url_fix(query)
+		user_query = result.."&recursive=true"
+		shown = false
+		items = {}
+		toggle_overlay()
+	end
 end
 
 local function search_input()
-	if #api_key <= 0 then connect() end
 	input.get_user_input(search)
 end
 
