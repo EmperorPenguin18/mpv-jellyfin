@@ -11,7 +11,8 @@ local options = {
 	password = "",
 	image_path = "",
 	hide_spoilers = "on",
-	show_by_default = ""
+	show_by_default = "",
+	use_playlist = ""
 }
 opt.read_options(options, mp.get_script_name())
 
@@ -189,7 +190,16 @@ end
 
 local function play_video()
 	toggle_overlay()
-	mp.commandv("loadfile", options.url.."/Videos/"..video_id.."/stream?static=true&api_key="..api_key)
+	if options.use_playlist == "on" then
+		mp.command("playlist-clear")
+		for i = 1, #items do
+			if i ~= selection[layer] then
+				mp.commandv("loadfile", options.url.."/Videos/"..items[i].Id.."/stream?static=true&api_key="..api_key, "append")
+			end
+		end
+	end
+	mp.commandv("playlist-play-index", "none")
+	mp.commandv("loadfile", options.url.."/Videos/"..video_id.."/stream?static=true&api_key="..api_key, "insert-at-play", selection[layer]-1)
 	mp.set_property("force-media-title", items[selection[layer]].Name)
 	current_selection = selection[layer]
 end
@@ -281,6 +291,8 @@ end
 
 local function unpause()
 	mp.set_property_bool("pause", false)
+	mp.set_property("force-media-title", "")
+	video_id = ""
 end
 
 local function url_fix(str) -- add more later?
