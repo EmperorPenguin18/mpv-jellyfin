@@ -190,6 +190,7 @@ end
 
 local function play_video()
 	toggle_overlay()
+	mp.commandv("playlist-play-index", "none")
 	if options.use_playlist == "on" then
 		mp.command("playlist-clear")
 		for i = 1, #items do
@@ -198,7 +199,6 @@ local function play_video()
 			end
 		end
 	end
-	mp.commandv("playlist-play-index", "none")
 	mp.commandv("loadfile", options.url.."/Videos/"..video_id.."/stream?static=true&api_key="..api_key, "insert-at-play", selection[layer]-1)
 	mp.set_property("force-media-title", items[selection[layer]].Name)
 	current_selection = selection[layer]
