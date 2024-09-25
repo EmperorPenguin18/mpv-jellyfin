@@ -1,6 +1,7 @@
 local opt = require 'mp.options'
 local utils = require 'mp.utils'
 local msg = require 'mp.msg'
+local is_windows = package.config:sub(1,1) == '\\'
 
 package.path = mp.command_native({"expand-path", "~~/script-modules/?.lua;"})..package.path
 local input_success, input = pcall(require, "user-input-module")
@@ -35,6 +36,14 @@ local video_id = ""
 local async = nil
 
 local toggle_overlay -- function
+
+local function mkdir(path)
+	if is_windows then
+		io.popen('mkdir "'..path..'"')
+	else
+		os.execute('mkdir -p "'..path..'"')
+	end
+end
 
 local function send_request(method, url)
 	if #api_key > 0 then
@@ -313,7 +322,7 @@ local function search_input()
 	input.get_user_input(search)
 end
 
-os.execute("mkdir -p "..options.image_path)
+mkdir(options.image_path)
 mp.add_periodic_timer(1, check_percent)
 mp.add_key_binding("Ctrl+j", "jf", toggle_overlay)
 mp.observe_property("osd-width", "number", width_change)
