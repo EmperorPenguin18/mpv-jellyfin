@@ -39,7 +39,7 @@ local toggle_overlay -- function
 
 local function mkdir(path)
 	if is_windows then
-		io.popen('mkdir "'..path..'"')
+		--io.popen('mkdir "'..path..'"')
 	else
 		os.execute('mkdir -p "'..path..'"')
 	end
