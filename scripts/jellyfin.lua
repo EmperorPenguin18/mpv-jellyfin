@@ -102,7 +102,19 @@ end
 local scale = 2 -- const
 
 local function show_image(success, result, error, userdata)
-	if success == true and shown == true then
+	if not success then
+		msg.error("Failed to create image: " .. error)
+		return
+	elseif result.error_string == "init" then
+		msg.error("Failed to create image: mpv not found.")
+		return
+	elseif result.status ~= 0 then
+		if not result.killed_by_us then
+			msg.error("Failed to create image: mpv exited with status: " .. result.status .. ".")
+		end
+		return
+	end
+	if shown == true then
 		mp.command_native({
 			name = "overlay-add",
 			id = 0,
