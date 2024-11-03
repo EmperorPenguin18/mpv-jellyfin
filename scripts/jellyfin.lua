@@ -136,11 +136,11 @@ local function update_image(item)
 	local width = math.floor(ow/(3*scale))
 	local height = 0
 	local filepath = ""
+	if async ~= nil then mp.abort_async_command(async) end
 	mp.commandv("overlay-remove", "0")
 	if item.ImageTags.Primary ~= nil then
 		height = math.floor(width/item.PrimaryImageAspectRatio)
 		filepath = options.image_path.."/"..item.Id.."_"..width.."_"..height..".bgra"
-		if async ~= nil then mp.abort_async_command(async) end
 		async = mp.command_native_async({
 			name = "subprocess",
 			playback_only = false,
