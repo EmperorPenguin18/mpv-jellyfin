@@ -52,7 +52,7 @@ local function send_request(method, url)
 			capture_stdout = true,
 			capture_stderr = true,
 			playback_only = false,
-			args = {"curl", "-X", method, url}
+			args = {"curl", "-X", method, url, "-H", "Authorization: MediaBrowser Token=\""..api_key.."\""}
 		})
 		return utils.parse_json(request.stdout)
 	end
@@ -144,7 +144,7 @@ local function update_image(item)
 		async = mp.command_native_async({
 			name = "subprocess",
 			playback_only = false,
-			args = { "mpv", options.url.."/Items/"..item.Id.."/Images/Primary?api_key="..api_key.."&width="..width.."&height="..height, "--no-config", "--msg-level=all=no", "--vf=lavfi=[format=bgra]", "--of=rawvideo", "--o="..filepath }
+			args = { "mpv", options.url.."/Items/"..item.Id.."/Images/Primary?width="..width.."&height="..height, "--no-config", "--msg-level=all=no", "--vf=lavfi=[format=bgra]", "--of=rawvideo", "--o="..filepath }
 		}, function(success, result, error) show_image(success, result, error, {width, height, filepath}) end)
 	end
 end
@@ -188,7 +188,7 @@ end
 local function update_overlay()
 	overlay.data = "{\\fs16}Loading..."
 	overlay:update()
-	local base_url = options.url.."/Items?api_key="..api_key.."&userID="..user_id.."&parentId="..parent_id[layer].."&enableImageTypes=Primary&imageTypeLimit=1&fields=PrimaryImageAspectRatio,Taglines,Overview"
+	local base_url = options.url.."/Items?userID="..user_id.."&parentId="..parent_id[layer].."&enableImageTypes=Primary&imageTypeLimit=1&fields=PrimaryImageAspectRatio,Taglines,Overview"
 	if layer == 2 then
 		base_url = base_url.."&sortBy=SortName"
 	else
@@ -216,11 +216,11 @@ local function play_video()
 		mp.command("playlist-clear")
 		for i = 1, #items do
 			if i ~= selection[layer] then
-				mp.commandv("loadfile", options.url.."/Videos/"..items[i].Id.."/stream?static=true&api_key="..api_key, "append")
+				mp.commandv("loadfile", options.url.."/Videos/"..items[i].Id.."/stream?static=true", "append")
 			end
 		end
 	end
-	mp.commandv("loadfile", options.url.."/Videos/"..video_id.."/stream?static=true&api_key="..api_key, "insert-at-play", selection[layer]-1)
+	mp.commandv("loadfile", options.url.."/Videos/"..video_id.."/stream?static=true", "insert-at-play", selection[layer]-1)
 	mp.set_property("force-media-title", items[selection[layer]].Name)
 	current_selection = selection[layer]
 end
@@ -302,7 +302,7 @@ local function check_percent()
 	local pos = mp.get_property_number("percent-pos")
 	if pos then
 		if pos > 95 and #video_id > 0 then
-			send_request("POST", options.url.."/Users/"..user_id.."/PlayedItems/"..video_id.."?api_key="..api_key)
+			send_request("POST", options.url.."/Users/"..user_id.."/PlayedItems/"..video_id)
 			items[current_selection].UserData.Played = true
 			video_id = ""
 			current_selection = nil
