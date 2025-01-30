@@ -85,6 +85,27 @@ local function update_list()
 	for i=list_start[layer],list_start[layer]+magic_num do
 		if i > #items then break end
 		local index = ""
+		-- handles multi-part episodes
+		local new_items = {}
+		local part_count = 1
+		local base_name = ""
+		if items[i].PartCount ~= nil then part_count = items[i].PartCount end
+		items[i].PartCount = 1
+		if part_count > 1 then
+			local part_url = options.url.."/Videos/"..items[i].Id.."/AdditionalParts"
+			new_items = send_request("GET", part_url).Items
+			base_name = items[i].Name
+			items[i].Name = base_name.." (Part 1)"
+		end
+		for j=1,part_count-1 do
+			table.insert(items, i+j, {})
+			for k,v in pairs(items[i]) do --copy whole entry
+				items[i+j][k] = v
+			end
+			items[i+j].Id = new_items[j].Id
+			items[i+j].Name = base_name.." (Part "..(j+1)..")"
+		end
+		--
 		if items[i].IndexNumber and items[i].IsFolder == false then
 			index = items[i].IndexNumber..". "
 		else
