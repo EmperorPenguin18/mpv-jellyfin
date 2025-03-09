@@ -32,7 +32,6 @@ local current_selection = 1
 
 local items = {}
 local ow, oh, op = 0, 0, 0
-local video_id = ""
 local async = nil
 
 local align_x = 1 -- 1 = left, 2 = center, 3 = right
@@ -249,15 +248,15 @@ end
 local function play_video()
     toggle_overlay()
     mp.commandv("playlist-play-index", "none")
+    mp.command("playlist-clear")
     if options.use_playlist == "on" then
-        mp.command("playlist-clear")
         for i = 1, #items do
             if i ~= selection[layer] then
                 mp.commandv("loadfile", options.url.."/Videos/"..items[i].Id.."/stream?static=true", "append")
             end
         end
     end
-    mp.commandv("loadfile", options.url.."/Videos/"..video_id.."/stream?static=true", "insert-at-play", selection[layer]-1)
+    mp.commandv("loadfile", options.url.."/Videos/"..items[selection[layer]].Id.."/stream?static=true", "insert-at-play", selection[layer]-1)
     mp.set_property("force-media-title", items[selection[layer]].Name)
     current_selection = selection[layer]
 end
@@ -280,7 +279,6 @@ end
 
 move_right = function()
     if items[selection[layer]].IsFolder == false then
-        video_id = items[selection[layer]].Id
         play_video()
     else
         layer = layer + 1 -- shouldn't get too big
@@ -367,13 +365,17 @@ toggle_overlay = function()
     shown = not shown
 end
 
+local function disable_overlay()
+    shown = true
+    toggle_overlay()
+end
+
 local function check_percent()
     local pos = mp.get_property_number("percent-pos")
     if pos then
-        if pos > 95 and #video_id > 0 then
-            send_request("POST", options.url.."/Users/"..user_id.."/PlayedItems/"..video_id)
+        if pos > 95 and current_selection ~= nil then
+            send_request("POST", options.url.."/Users/"..user_id.."/PlayedItems/"..items[current_selection].Id)
             items[current_selection].UserData.Played = true
-            video_id = ""
             current_selection = nil
         end
     end
@@ -382,7 +384,6 @@ end
 local function unpause()
     mp.set_property_bool("pause", false)
     mp.set_property("force-media-title", "")
-    video_id = ""
 end
 
 local function url_fix(str) -- add more later?
@@ -433,6 +434,7 @@ end
 mkdir(options.image_path)
 mp.add_periodic_timer(1, check_percent)
 mp.add_key_binding("Ctrl+j", "jf", toggle_overlay)
+mp.add_key_binding("ESC", nil, disable_overlay)
 mp.observe_property("osd-width", "number", width_change)
 mp.observe_property("osd-align-x", "string", align_x_change)
 mp.observe_property("osd-align-y", "string", align_y_change)
