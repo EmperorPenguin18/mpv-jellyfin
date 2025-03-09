@@ -28,7 +28,7 @@ local parent_id = {"", "", "", ""}
 local selection = {1, 1, 1, 1}
 local list_start = {1, 1, 1, 1}
 local layer = 1
-local current_selection = 1
+local current_selection = 0
 
 local items = {}
 local ow, oh, op = 0, 0, 0
@@ -373,10 +373,10 @@ end
 local function check_percent()
     local pos = mp.get_property_number("percent-pos")
     if pos then
-        if pos > 95 and current_selection ~= nil then
+        if pos > 95 and current_selection ~= 0 then
             send_request("POST", options.url.."/Users/"..user_id.."/PlayedItems/"..items[current_selection].Id)
             items[current_selection].UserData.Played = true
-            current_selection = nil
+            current_selection = 0
         end
     end
 end
