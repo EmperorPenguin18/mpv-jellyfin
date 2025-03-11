@@ -28,7 +28,6 @@ local parent_id = {"", "", "", ""}
 local selection = {1, 1, 1, 1}
 local list_start = {1, 1, 1, 1}
 local layer = 1
-local current_selection = 0
 
 local items = {}
 local ow, oh, op = 0, 0, 0
@@ -258,7 +257,6 @@ local function play_video()
     end
     mp.commandv("loadfile", options.url.."/Videos/"..items[selection[layer]].Id.."/stream?static=true", "insert-at-play", selection[layer]-1)
     mp.set_property("force-media-title", items[selection[layer]].Name)
-    current_selection = selection[layer]
 end
 
 move_up = function()
@@ -370,14 +368,35 @@ local function disable_overlay()
     toggle_overlay()
 end
 
+local function split(inputstr, sep)
+    if sep == nil then
+        sep = "%s"
+    end
+    local t = {}
+    for str in string.gmatch(inputstr, "([^"..sep.."]+)") do
+        table.insert(t, str)
+    end
+    return t
+end
+
 local function check_percent()
     local pos = mp.get_property_number("percent-pos")
-    if pos then
-        if pos > 95 and current_selection ~= 0 then
-            send_request("POST", options.url.."/Users/"..user_id.."/PlayedItems/"..items[current_selection].Id)
-            items[current_selection].UserData.Played = true
-            current_selection = 0
+    if pos == nil then return end
+    if pos <= 94 or #items == 0 then return end
+    local path = mp.get_property("path")
+    if path == nil then return end
+    local video_id = split(path, '/')[4]
+    local UserData = nil -- pointer
+    for i = 1, #items do
+        if items[i].Id == video_id then
+            UserData = items[i].UserData
+            break
         end
+    end
+    if UserData == nil then return end
+    if UserData.Played == false then
+        send_request("POST", options.url.."/Users/"..user_id.."/PlayedItems/"..video_id)
+        UserData.Played = true
     end
 end
 
