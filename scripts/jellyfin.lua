@@ -252,12 +252,12 @@ local function update_overlay()
     else
         items = json.Items
     end
-    ow, oh, op = mp.get_osd_size()
     update_data()
 end
 
 local function width_change(name, data)
-    if shown then update_overlay() end
+    ow, oh, op = mp.get_osd_size()
+    if shown then update_image(items[selection[layer]]) end
 end
 
 local function play_video()
