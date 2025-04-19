@@ -42,6 +42,9 @@ local align_y = 4 -- 4 = top, 8 = center, 0 = bottom
 --Adding 8 to the value specifies a "Midtitle"
 local align_main = "{\\a0}"
 local align_other = "{\\a7}"
+local clr_default = "{\\c&HFFFFFF&}"
+local clr_selected = "{\\c&HFF&}"
+local clr_watched = "{\\c&HA0A0A0&}"
 
 local toggle_overlay -- function
 local move_up -- function
@@ -139,11 +142,15 @@ local function update_list()
         else
             -- nothing
         end
+        overlay.data = overlay.data.."{\\fs16}"
         if i == selection[layer] then
-            overlay.data = overlay.data.."{\\fs16}{\\c&HFF&}"..index..items[i].Name.."\n"
+            overlay.data = overlay.data..clr_selected
+        elseif items[i].UserData.Played == true then
+            overlay.data = overlay.data..clr_watched
         else
-            overlay.data = overlay.data.."{\\fs16}"..index..items[i].Name.."\n"
+            overlay.data = overlay.data..clr_default
         end
+        overlay.data = overlay.data..index..items[i].Name.."\n"
     end
     overlay:update()
 end
