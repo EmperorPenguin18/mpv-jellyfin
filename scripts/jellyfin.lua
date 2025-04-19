@@ -13,7 +13,10 @@ local options = {
     image_path = "",
     hide_spoilers = "on",
     show_by_default = "",
-    use_playlist = ""
+    use_playlist = "",
+    colour_default = "FFFFFF",
+    colour_selected = "FF",
+    colour_watched = "A0A0A0"
 }
 opt.read_options(options, mp.get_script_name())
 
@@ -42,9 +45,6 @@ local align_y = 4 -- 4 = top, 8 = center, 0 = bottom
 --Adding 8 to the value specifies a "Midtitle"
 local align_main = "{\\a0}"
 local align_other = "{\\a7}"
-local clr_default = "{\\c&HFFFFFF&}"
-local clr_selected = "{\\c&HFF&}"
-local clr_watched = "{\\c&HA0A0A0&}"
 
 local toggle_overlay -- function
 local move_up -- function
@@ -142,15 +142,15 @@ local function update_list()
         else
             -- nothing
         end
-        overlay.data = overlay.data.."{\\fs16}"
+        overlay.data = overlay.data.."{\\fs16}".."{\\c&H"
         if i == selection[layer] then
-            overlay.data = overlay.data..clr_selected
+            overlay.data = overlay.data..options.colour_selected
         elseif items[i].UserData.Played == true then
-            overlay.data = overlay.data..clr_watched
+            overlay.data = overlay.data..options.colour_watched
         else
-            overlay.data = overlay.data..clr_default
+            overlay.data = overlay.data..options.colour_default
         end
-        overlay.data = overlay.data..index..items[i].Name.."\n"
+        overlay.data = overlay.data.."&}"..index..items[i].Name.."\n"
     end
     overlay:update()
 end
