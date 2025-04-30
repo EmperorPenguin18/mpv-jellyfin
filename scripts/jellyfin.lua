@@ -10,8 +10,8 @@ local options = {
     url = "",
     username = "",
     password = "",
-    show_images = "on",
     image_path = "",
+    hide_images = "",
     hide_spoilers = "on",
     show_by_default = "",
     use_playlist = "",
@@ -240,7 +240,7 @@ end
 local function update_data()
     update_list()
     local item = items[selection[layer]]
-    if options.show_images ~= "off" then update_image(item) end
+    if options.hide_images ~= "on" then update_image(item) end
     update_metadata(item)
 end
 
@@ -477,7 +477,7 @@ end
 mp.add_periodic_timer(1, check_percent)
 mp.add_key_binding("Ctrl+j", "jf", toggle_overlay)
 mp.add_key_binding("ESC", nil, disable_overlay)
-if options.show_images ~= "off" then
+if options.hide_images ~= "on" then
     mkdir(options.image_path)
     mp.observe_property("osd-width", "number", width_change)
 end
