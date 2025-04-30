@@ -10,6 +10,7 @@ local options = {
     url = "",
     username = "",
     password = "",
+    show_images = "on",
     image_path = "",
     hide_spoilers = "on",
     show_by_default = "",
@@ -239,7 +240,7 @@ end
 local function update_data()
     update_list()
     local item = items[selection[layer]]
-    update_image(item)
+    if options.show_images ~= "off" then update_image(item) end
     update_metadata(item)
 end
 
@@ -473,11 +474,13 @@ local function align_y_change(name, data)
     set_align()
 end
 
-mkdir(options.image_path)
 mp.add_periodic_timer(1, check_percent)
 mp.add_key_binding("Ctrl+j", "jf", toggle_overlay)
 mp.add_key_binding("ESC", nil, disable_overlay)
-mp.observe_property("osd-width", "number", width_change)
+if options.show_images ~= "off" then
+    mkdir(options.image_path)
+    mp.observe_property("osd-width", "number", width_change)
+end
 mp.observe_property("osd-align-x", "string", align_x_change)
 mp.observe_property("osd-align-y", "string", align_y_change)
 mp.register_event("end-file", unpause)
