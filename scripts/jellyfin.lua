@@ -14,6 +14,7 @@ local options = {
     hide_images = "",
     hide_spoilers = "on",
     show_by_default = "",
+    show_on_idle = "",
     use_playlist = "",
     colour_default = "FFFFFF",
     colour_selected = "FF",
@@ -474,6 +475,12 @@ local function align_y_change(name, data)
     set_align()
 end
 
+local function enable_overlay_on_idle()
+    if mp.get_property_bool("idle-active") and not shown then
+        toggle_overlay()
+    end
+end
+
 mp.add_periodic_timer(1, check_percent)
 mp.add_key_binding("Ctrl+j", "jf", toggle_overlay)
 mp.add_key_binding("ESC", nil, disable_overlay)
@@ -488,3 +495,6 @@ if input_success then
     mp.add_key_binding("Ctrl+f", "jf_search", search_input)
 end
 if options.show_by_default == "on" then toggle_overlay() end
+if options.show_on_idle == "on" then
+    mp.observe_property("idle-active", "bool", enable_overlay_on_idle)
+end
