@@ -475,8 +475,8 @@ local function align_y_change(name, data)
     set_align()
 end
 
-local function enable_overlay_on_idle()
-    if mp.get_property_bool("idle-active") and not shown then
+local function enable_overlay_on_idle(_, is_idle)
+    if is_idle and not shown then
         toggle_overlay()
     end
 end
