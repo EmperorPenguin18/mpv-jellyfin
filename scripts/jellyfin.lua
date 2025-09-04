@@ -248,7 +248,7 @@ end
 local function update_overlay()
     overlay.data = "{\\fs16}Loading..."
     overlay:update()
-    local base_url = options.url.."/Items?userID="..user_id.."&parentId="..parent_id[layer].."&enableImageTypes=Primary&imageTypeLimit=1&fields=PrimaryImageAspectRatio,Taglines,Overview"
+    local base_url = options.url.."/Items?userID="..user_id.."&parentId="..parent_id[layer].."&enableImageTypes=Primary&imageTypeLimit=1&fields=PrimaryImageAspectRatio,Taglines,Overview,MediaSources"
     if layer == 2 then
         base_url = base_url.."&sortBy=SortName"
     else
@@ -280,7 +280,8 @@ local function play_video()
             end
         end
     end
-    mp.commandv("loadfile", options.url.."/Videos/"..items[selection[layer]].Id.."/stream?static=true", "insert-at-play", selection[layer]-1)
+    local id = items[selection[layer]].Id
+    mp.commandv("loadfile", options.url.."/Videos/"..id.."/stream?static=true", "insert-at-play", selection[layer]-1)
     mp.set_property("force-media-title", items[selection[layer]].Name)
 end
 
@@ -404,24 +405,46 @@ local function split(inputstr, sep)
     return t
 end
 
+local function get_playing_item()
+    if #items == 0 then return nil end
+    local path = mp.get_property("path")
+    if path == nil then return nil end
+    local video_id = split(path, '/')[4]
+    for i = 1, #items do
+        if items[i].Id == video_id then
+            return items[i]
+        end
+    end
+    return nil
+end
+
 local function check_percent()
     local pos = mp.get_property_number("percent-pos")
     if pos == nil then return end
-    if pos <= 94 or #items == 0 then return end
-    local path = mp.get_property("path")
-    if path == nil then return end
-    local video_id = split(path, '/')[4]
-    local UserData = nil -- pointer
-    for i = 1, #items do
-        if items[i].Id == video_id then
-            UserData = items[i].UserData
-            break
-        end
-    end
+    if pos <= 94 then return end
+    local item = get_playing_item()
+    if item == nil then return end
+    local UserData = item.UserData -- pointer
     if UserData == nil then return end
     if UserData.Played == false then
         local err = send_request_async("POST", options.url.."/Users/"..user_id.."/PlayedItems/"..video_id)
         if err == 0 then UserData.Played = true end
+    end
+end
+
+local function add_subs()
+    local item = get_playing_item()
+    if item == nil then return end
+    for _,source in ipairs(item.MediaSources) do
+        if source.Id == item.Id then
+            for _,stream in ipairs(source.MediaStreams) do
+                if stream.IsTextSubtitleStream == true and stream.IsExternal == true then
+                    local ext = stream.Path:match(".+%.([^.]+)$")
+                    mp.commandv("sub-add", options.url.."/Videos/"..item.Id.."/"..source.Id.."/Subtitles/"..stream.Index.."/Stream."..ext, "auto", stream.DisplayTitle, stream.Language)
+                end
+            end
+            break
+        end
     end
 end
 
@@ -494,6 +517,7 @@ mp.register_event("end-file", unpause)
 if input_success then
     mp.add_key_binding("Ctrl+f", "jf_search", search_input)
 end
+mp.register_event("file-loaded", add_subs)
 if options.show_by_default == "on" then toggle_overlay() end
 if options.show_on_idle == "on" then
     mp.observe_property("idle-active", "bool", enable_overlay_on_idle)
