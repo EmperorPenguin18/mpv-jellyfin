@@ -427,7 +427,7 @@ local function check_percent()
     local UserData = item.UserData -- pointer
     if UserData == nil then return end
     if UserData.Played == false then
-        local err = send_request_async("POST", options.url.."/Users/"..user_id.."/PlayedItems/"..video_id)
+        local err = send_request_async("POST", options.url.."/Users/"..user_id.."/PlayedItems/"..item.Id)
         if err == 0 then UserData.Played = true end
     end
 end
