@@ -18,7 +18,8 @@ local options = {
     use_playlist = "",
     colour_default = "FFFFFF",
     colour_selected = "FF",
-    colour_watched = "A0A0A0"
+    colour_watched = "A0A0A0",
+    sort_mode = 0
 }
 opt.read_options(options, mp.get_script_name())
 if options.url:sub(-1) == "/" then
@@ -252,7 +253,9 @@ local function update_overlay()
     overlay.data = "{\\fs16}Loading..."
     overlay:update()
     local base_url = options.url.."/Items?userID="..user_id.."&parentId="..parent_id[layer].."&enableImageTypes=Primary&imageTypeLimit=1&fields=PrimaryImageAspectRatio,Taglines,Overview,MediaSources"
-    if layer == 2 then
+    if options.sort_mode == 1 then
+        base_url = base_url.."&sortBy=PremiereDate"
+    elseif layer == 2 then
         base_url = base_url.."&sortBy=SortName"
     else
         -- nothing
