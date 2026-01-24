@@ -27,6 +27,8 @@ When you activate a video in the menu, it will begin to play that file.
 
 ## Limitations
 
+Requires mpv v0.38.0 or greater.
+
 In general this is a very minimal script and isn't designed to be a full Jellyfin client. Changing settings or metadata has to be done from a real Jellyfin client.
 
 Thumbnails will accumulate if the selected image path isn't tmpfs. In addition thumbnails are raw bgra, which means they are less space efficient than the source images from the Jellyfin server.
