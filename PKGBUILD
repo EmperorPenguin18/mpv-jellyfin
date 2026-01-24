@@ -1,7 +1,7 @@
 # Maintainer: Sebastien MacDougall-Landry
 
 pkgname=mpv-jellyfin
-pkgver=1.1
+pkgver=1.2
 pkgrel=1
 pkgdesc='mpv plugin that turns it into a Jellyfin client'
 url='https://github.com/EmperorPenguin18/mpv-jellyfin/'
