@@ -21,6 +21,9 @@ local options = {
     colour_watched = "A0A0A0"
 }
 opt.read_options(options, mp.get_script_name())
+if options.url:sub(-1) == "/" then
+    options.url = options.url:sub(1, -2)
+end
 
 local overlay = mp.create_osd_overlay("ass-events")
 local meta_overlay = mp.create_osd_overlay("ass-events")
@@ -353,14 +356,36 @@ local function key_left()
 end
 
 local function connect()
-    local request = mp.command_native({
+    local req = mp.command_native({
         name = "subprocess",
         capture_stdout = true,
         capture_stderr = true,
         playback_only = false,
-        args = {"curl", options.url.."/Users/AuthenticateByName", "-H", "accept: application/json", "-H", "content-type: application/json", "-H", "x-emby-authorization: MediaBrowser Client=\"Custom Client\", Device=\"Custom Device\", DeviceId=\"1\", Version=\"0.0.1\"", "-d", "{\"username\":\""..options.username.."\",\"Pw\":\""..options.password.."\"}"}
+        args = {
+            "curl",
+            "-sS",
+            "-X", "POST",
+            options.url .. "/Users/AuthenticateByName",
+            "-H", "Accept: application/json",
+            "-H", "Content-Type: application/json",
+            "-H", "Authorization: MediaBrowser Client=mpv, Device=mpv, DeviceId=mpv, Version=1.0",
+            "-d", string.format('{"Username":"%s","Pw":"%s"}', options.username, options.password)
+        }
     })
-    local result = utils.parse_json(request.stdout)
+
+    if not req or not req.stdout or #req.stdout == 0 then
+        msg.error("Jellyfin auth failed: empty response")
+        msg.error(req and req.stderr or "")
+        return
+    end
+
+    local result = utils.parse_json(req.stdout)
+    if not result or not result.User or not result.AccessToken then
+        msg.error("Jellyfin auth failed: invalid JSON")
+        msg.error(req.stdout)
+        return
+    end
+
     user_id = result.User.Id
     api_key = result.AccessToken
 end
