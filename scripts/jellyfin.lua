@@ -59,7 +59,7 @@ local move_left -- function
 
 local function mkdir(path)
     if is_windows then
-        --io.popen('mkdir "'..path..'"')
+        os.execute('mkdir "'..path..'"')
     else
         os.execute('mkdir -p "'..path..'"')
     end
