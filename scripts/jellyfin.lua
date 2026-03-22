@@ -68,6 +68,7 @@ end
 
 local function send_request(method, url)
     if #api_key > 0 then
+        local start_time = mp.get_time()
         local request = mp.command_native({
             name = "subprocess",
             capture_stdout = true,
@@ -75,6 +76,7 @@ local function send_request(method, url)
             playback_only = false,
             args = {"curl", "-X", method, url, "-H", "Authorization: MediaBrowser Token=\""..api_key.."\""}
         })
+        msg.debug(string.format("Waited %.3f seconds for response from Jellyfin server", mp.get_time() - start_time))
         return utils.parse_json(request.stdout)
     end
     return nil
@@ -267,7 +269,9 @@ local function update_overlay()
     else
         items = json.Items
     end
+    local start_time = mp.get_time()
     update_data()
+    msg.debug(string.format("Updating overlay data took %.3f seconds", mp.get_time() - start_time))
 end
 
 local function width_change(name, data)
